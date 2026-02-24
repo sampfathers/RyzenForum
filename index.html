@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>رایزن رول پلی | فرم‌دهی پیشرفته</title>
+    <title>ریزن رول پلی | فرم‌دهی نهایی</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
+        /* استایل‌ها (کامل و بدون تغییر) */
         @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;600;700;900&display=swap');
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Vazirmatn', sans-serif; }
         body { min-height: 100vh; background: radial-gradient(circle at 20% 30%, #1e1e1e, #0a0a0a); color: #e0e0e0; transition: all 0.3s ease; overflow-x: hidden; position: relative; }
@@ -105,6 +106,49 @@
         .hidden { display: none !important; }
         .error-message { color: #ff6b6b; font-size: 0.9rem; margin-top: 5px; text-align: right; }
         @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+        /* دکمه‌های جدید */
+        .sync-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .refresh-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: gold;
+            color: black;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 0 20px gold;
+            z-index: 1002;
+            border: none;
+            transition: 0.3s;
+        }
+        .refresh-btn:hover {
+            transform: rotate(180deg) scale(1.1);
+        }
+        .export-btn, .import-btn {
+            background: #333;
+            color: gold;
+            border: 1px solid gold;
+            padding: 10px 20px;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .export-btn:hover, .import-btn:hover {
+            background: gold;
+            color: black;
+        }
     </style>
 </head>
 <body>
@@ -121,6 +165,9 @@
                 <button class="btn" id="logout-btn"><i class="fas fa-sign-out-alt"></i> خروج</button>
             </div>
         </header>
+
+        <!-- دکمه رفرش دستی -->
+        <div class="refresh-btn" id="refresh-btn" title="بارگذاری مجدد باکس‌ها"><i class="fas fa-sync-alt"></i></div>
 
         <div id="admin-float-icon" class="admin-float-icon hidden" title="پنل مدیریت"><i class="fas fa-user-tie"></i></div>
 
@@ -159,6 +206,10 @@
         </div>
 
         <div id="main-view" class="hidden">
+            <div class="sync-buttons">
+                <button class="export-btn" id="export-data"><i class="fas fa-download"></i> خروجی دیتا</button>
+                <button class="import-btn" id="import-data"><i class="fas fa-upload"></i> ورودی دیتا</button>
+            </div>
             <div class="boxes-grid" id="boxes-container"></div>
         </div>
 
@@ -356,7 +407,7 @@
                 }
             }
 
-            // رندر باکس‌ها (همه باکس‌ها نمایش داده می‌شوند، صرف‌نظر از وضعیت)
+            // رندر باکس‌ها (همه باکس‌ها نمایش داده می‌شوند)
             function renderBoxes() {
                 const boxes = getBoxes();
                 const container = document.getElementById('boxes-container');
@@ -383,7 +434,6 @@
                 const boxes = getBoxes();
                 const box = boxes.find(b => b.id === boxId);
                 if (!box) return;
-                // حتی اگر بسته باشد، اجازه ورود به چت را می‌دهیم (فقط ارسال ممنوع)
                 currentBoxId = boxId;
                 document.getElementById('chat-box-title').innerText = box.title;
                 renderMessages();
@@ -464,7 +514,7 @@
                 if (box) { box.messages = box.messages.filter(m => m.id !== msgId); saveBoxes(boxes); renderMessages(); addActivity('حذف پیام', currentUser.username, `در باکس ${box.title}`); }
             }
 
-            // ارسال پیام (فقط ادمین می‌تواند در باکس بسته پیام بدهد)
+            // ارسال پیام
             function sendMessage() {
                 const input = document.getElementById('chat-input');
                 const text = input.value.trim();
@@ -517,7 +567,6 @@
                 if (password !== confirm) { errorDiv.innerText = 'رمز یکسان نیست'; return; }
                 const users = getUsers();
                 if (users.find(u => u.username === username)) { errorDiv.innerText = 'نام کاربری تکراری'; return; }
-                // کاربر جدید مستقیم verified=true می‌شود
                 users.push({ id: Date.now().toString(), username, password, isAdmin: false, isOwner: false, verified: true, banned: false, mutedUntil: null, avatar: '' });
                 saveUsers(users);
                 alert('ثبت‌نام موفق. حالا وارد شوید.');
@@ -705,15 +754,62 @@
             document.getElementById('send-message').addEventListener('click', sendMessage);
             document.getElementById('chat-input').addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
 
-            // ========== همگام‌سازی بین پنجره‌های مختلف (در صورت باز بودن چند تب) ==========
+            // ========== دکمه رفرش دستی ==========
+            document.getElementById('refresh-btn').addEventListener('click', () => {
+                if (currentUser) {
+                    renderBoxes();
+                    if (currentBoxId) renderMessages();
+                    alert('باکس‌ها به‌روزرسانی شدند.');
+                }
+            });
+
+            // ========== قابلیت export/import ==========
+            document.getElementById('export-data').addEventListener('click', () => {
+                const data = {
+                    boxes: getBoxes(),
+                    users: getUsers(),
+                    activities: getActivities()
+                };
+                const dataStr = JSON.stringify(data, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'ryzen_rp_backup.json';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+
+            document.getElementById('import-data').addEventListener('click', () => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        try {
+                            const importedData = JSON.parse(event.target.result);
+                            if (importedData.boxes) localStorage.setItem('boxes', JSON.stringify(importedData.boxes));
+                            if (importedData.users) localStorage.setItem('users', JSON.stringify(importedData.users));
+                            if (importedData.activities) localStorage.setItem('activities', JSON.stringify(importedData.activities));
+                            alert('داده‌ها با موفقیت وارد شدند. صفحه را مجدداً بارگذاری کنید.');
+                            location.reload();
+                        } catch (err) {
+                            alert('فایل نامعتبر است.');
+                        }
+                    };
+                    reader.readAsText(file);
+                };
+                input.click();
+            });
+
+            // ========== همگام‌سازی بین پنجره‌ها ==========
             window.addEventListener('storage', (e) => {
                 if (e.key === 'boxes' || e.key === 'users') {
                     if (currentUser) {
                         renderBoxes();
-                        if (currentBoxId) {
-                            // اگر در حال چت هستیم، پیام‌ها را به‌روز کنیم
-                            renderMessages();
-                        }
+                        if (currentBoxId) renderMessages();
                     }
                 }
             });
