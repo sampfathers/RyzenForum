@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ریزن رول پلی | فرم‌دهی پیشرفته</title>
+    <title>رایزن رول پلی | فرم‌دهی پیشرفته</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* استایل‌ها مانند قبل (برای اختصار حذف نشده، در فایل نهایی کامل است) */
         @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;600;700;900&display=swap');
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Vazirmatn', sans-serif; }
         body { min-height: 100vh; background: radial-gradient(circle at 20% 30%, #1e1e1e, #0a0a0a); color: #e0e0e0; transition: all 0.3s ease; overflow-x: hidden; position: relative; }
@@ -235,18 +234,18 @@
             let currentUser = null;
             let currentBoxId = null;
 
-            // ================== داده‌های اولیه ==================
+            // بارگذاری داده‌ها با باکس‌های پیش‌فرض
             function loadData() {
-                // کاربران
-                let users = [];
+                // کاربران پیش‌فرض
                 if (!localStorage.getItem('users')) {
-                    users = [
+                    const defaultUsers = [
                         { id: '1', username: 'Cartel', password: 'polese', isAdmin: true, isOwner: false, verified: true, banned: false, mutedUntil: null, avatar: '' },
                         { id: '2', username: 'Mamad', password: 'polese', isAdmin: true, isOwner: true, verified: true, banned: false, mutedUntil: null, avatar: '' }
                     ];
+                    localStorage.setItem('users', JSON.stringify(defaultUsers));
                 } else {
-                    users = JSON.parse(localStorage.getItem('users'));
-                    // اطمینان از وجود Mamad
+                    // اطمینان از درست بودن Mamad
+                    let users = JSON.parse(localStorage.getItem('users'));
                     const mamad = users.find(u => u.username === 'Mamad');
                     if (mamad) {
                         mamad.isAdmin = true;
@@ -256,20 +255,20 @@
                         users.push({ id: Date.now().toString(), username: 'Mamad', password: 'polese', isAdmin: true, isOwner: true, verified: true, banned: false, mutedUntil: null, avatar: '' });
                     }
                     users.forEach(u => { if (!u.avatar) u.avatar = ''; });
+                    localStorage.setItem('users', JSON.stringify(users));
                 }
-                localStorage.setItem('users', JSON.stringify(users));
 
-                // باکس‌های پیش‌فرض (درخواست‌های لیدری و استف)
+                // باکس‌های پیش‌فرض (اگر قبلاً وجود نداشته باشند)
                 if (!localStorage.getItem('boxes')) {
                     const sampleBoxes = [
                         { id: 'box1', title: 'درخواست لیدری اقلیت دولتی', bgColor: '#1e90ff', timer: null, createdBy: 'سیستم', status: 'open', messages: [] },
                         { id: 'box2', title: 'درخواست لیدری اقلیت خلاف', bgColor: '#dc143c', timer: null, createdBy: 'سیستم', status: 'open', messages: [] },
-                        { id: 'box3', title: 'درخواست ورود به استف', bgColor: '#32cd32', timer: null, createdBy: 'سیستم', status: 'open', messages: [] }
+                        { id: 'box3', title: 'درخواست ورود به تیم استف', bgColor: '#32cd32', timer: null, createdBy: 'سیستم', status: 'open', messages: [] },
+                        { id: 'box4', title: 'انتقادات و پیشنهادات', bgColor: '#ff8c00', timer: null, createdBy: 'سیستم', status: 'open', messages: [] }
                     ];
                     localStorage.setItem('boxes', JSON.stringify(sampleBoxes));
                 }
 
-                // فعالیت‌ها
                 if (!localStorage.getItem('activities')) {
                     localStorage.setItem('activities', JSON.stringify([]));
                 }
@@ -300,6 +299,7 @@
                 return getUsers().find(u => u.id === id) || null;
             }
 
+            // نمایش صفحات
             function showView(viewName) {
                 document.getElementById('auth-view').classList.add('hidden');
                 document.getElementById('verification-view').classList.add('hidden');
@@ -321,6 +321,7 @@
                 }
             }
 
+            // به‌روزرسانی هدر
             function updateHeader() {
                 if (currentUser) {
                     document.getElementById('header-username').innerText = currentUser.username;
@@ -355,14 +356,12 @@
                 }
             }
 
-            // رندر باکس‌ها در صفحه اصلی (برای همه کاربران)
+            // رندر باکس‌ها (همه باکس‌ها نمایش داده می‌شوند، صرف‌نظر از وضعیت)
             function renderBoxes() {
                 const boxes = getBoxes();
                 const container = document.getElementById('boxes-container');
                 container.innerHTML = '';
                 boxes.forEach(box => {
-                    // نمایش باکس‌های باز برای همه، باکس‌های بسته فقط برای ادمین
-                    if (box.status === 'closed' && !currentUser?.isAdmin) return;
                     const card = document.createElement('div');
                     card.className = 'box-card';
                     const color = box.bgColor || '#333';
@@ -384,14 +383,14 @@
                 const boxes = getBoxes();
                 const box = boxes.find(b => b.id === boxId);
                 if (!box) return;
-                if (box.status === 'closed' && !currentUser.isAdmin) { alert('این باکس بسته است.'); return; }
+                // حتی اگر بسته باشد، اجازه ورود به چت را می‌دهیم (فقط ارسال ممنوع)
                 currentBoxId = boxId;
                 document.getElementById('chat-box-title').innerText = box.title;
                 renderMessages();
                 showView('chat');
             }
 
-            // رندر پیام‌های چت
+            // رندر پیام‌ها
             function renderMessages() {
                 const boxes = getBoxes();
                 const box = boxes.find(b => b.id === currentBoxId);
@@ -465,14 +464,23 @@
                 if (box) { box.messages = box.messages.filter(m => m.id !== msgId); saveBoxes(boxes); renderMessages(); addActivity('حذف پیام', currentUser.username, `در باکس ${box.title}`); }
             }
 
+            // ارسال پیام (فقط ادمین می‌تواند در باکس بسته پیام بدهد)
             function sendMessage() {
                 const input = document.getElementById('chat-input');
                 const text = input.value.trim();
                 if (!text || !currentUser || !currentBoxId) return;
                 if (currentUser.mutedUntil && Date.now() < currentUser.mutedUntil) { alert('شما میوت هستید'); return; }
+
                 const boxes = getBoxes();
                 const box = boxes.find(b => b.id === currentBoxId);
                 if (!box) return;
+
+                // اگر باکس بسته است و کاربر ادمین نیست، اجازه نده
+                if (box.status === 'closed' && !currentUser.isAdmin) {
+                    alert('این باکس بسته است و فقط ادمین‌ها می‌توانند پیام بفرستند.');
+                    return;
+                }
+
                 if (!box.messages) box.messages = [];
                 box.messages.push({ id: Date.now().toString(), userId: currentUser.id, username: currentUser.username, text, timestamp: new Date().toLocaleString('fa-IR'), pinned: false });
                 saveBoxes(boxes);
@@ -481,6 +489,7 @@
                 addActivity('پیام جدید', currentUser.username, `در باکس ${box.title}`);
             }
 
+            // اکتیویتی فید
             function renderAdminActivityFeed() {
                 const acts = getActivities();
                 const feed = document.getElementById('admin-activity-feed');
@@ -488,7 +497,7 @@
                 acts.slice(0, 20).forEach(act => feed.innerHTML += `<div class="activity-item">[${act.timestamp}] ${act.user}: ${act.action} ${act.details || ''}</div>`);
             }
 
-            // ================== رویدادهای احراز هویت ==================
+            // ========== رویدادهای احراز هویت ==========
             document.getElementById('show-register').addEventListener('click', () => {
                 document.getElementById('login-card').classList.add('hidden');
                 document.getElementById('register-card').classList.remove('hidden');
@@ -508,7 +517,7 @@
                 if (password !== confirm) { errorDiv.innerText = 'رمز یکسان نیست'; return; }
                 const users = getUsers();
                 if (users.find(u => u.username === username)) { errorDiv.innerText = 'نام کاربری تکراری'; return; }
-                // کاربر جدید مستقیماً verified=true می‌شود تا بدون پذیرش قوانین وارد شود
+                // کاربر جدید مستقیم verified=true می‌شود
                 users.push({ id: Date.now().toString(), username, password, isAdmin: false, isOwner: false, verified: true, banned: false, mutedUntil: null, avatar: '' });
                 saveUsers(users);
                 alert('ثبت‌نام موفق. حالا وارد شوید.');
@@ -527,7 +536,6 @@
                 saveSession(user);
                 updateHeader();
                 addActivity('ورود', user.username, '');
-                // اگر کاربر verified نباشد (فقط کاربران قدیمی) به صفحه قوانین برود
                 if (!user.verified) showView('verification');
                 else { renderBoxes(); showView('main'); }
             });
@@ -544,7 +552,7 @@
                 currentUser = null; currentBoxId = null; clearSession(); updateHeader(); showView('auth');
             });
 
-            // ================== پروفایل ==================
+            // ========== پروفایل ==========
             document.getElementById('profile-btn').addEventListener('click', () => {
                 if (!currentUser) return;
                 document.getElementById('profile-avatar-preview').src = currentUser.avatar || '';
@@ -591,7 +599,7 @@
                 }
             });
 
-            // ================== پنل ادمین ==================
+            // ========== پنل ادمین ==========
             function openAdminPanel() {
                 if (!currentUser?.isAdmin) return;
                 renderAdminBoxes();
@@ -604,6 +612,7 @@
             document.getElementById('admin-panel-btn').addEventListener('click', openAdminPanel);
             document.getElementById('admin-float-icon').addEventListener('click', openAdminPanel);
 
+            // پیش‌نمایش رنگ
             const hexInput = document.getElementById('box-color-hex');
             const preview = document.getElementById('box-color-preview');
             hexInput.addEventListener('input', () => {
@@ -691,12 +700,25 @@
                 });
             });
 
-            // ================== چت ==================
+            // ========== چت ==========
             document.getElementById('close-chat').addEventListener('click', () => { showView('main'); currentBoxId = null; });
             document.getElementById('send-message').addEventListener('click', sendMessage);
             document.getElementById('chat-input').addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
 
-            // ================== راه‌اندازی اولیه ==================
+            // ========== همگام‌سازی بین پنجره‌های مختلف (در صورت باز بودن چند تب) ==========
+            window.addEventListener('storage', (e) => {
+                if (e.key === 'boxes' || e.key === 'users') {
+                    if (currentUser) {
+                        renderBoxes();
+                        if (currentBoxId) {
+                            // اگر در حال چت هستیم، پیام‌ها را به‌روز کنیم
+                            renderMessages();
+                        }
+                    }
+                }
+            });
+
+            // ========== راه‌اندازی اولیه ==========
             const sessionUser = loadSession();
             if (sessionUser) {
                 currentUser = sessionUser;
